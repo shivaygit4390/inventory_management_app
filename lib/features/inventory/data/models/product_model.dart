@@ -1,15 +1,15 @@
-import 'package:equatable/equatable.dart';
+import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 
-class ProductModel extends Equatable {
+class ProductModel extends Product {
   const ProductModel({
-    this.id = '',
-    required this.name,
-    required this.description,
-    required this.category,
-    required this.price,
-    required this.stockQuantity,
-    required this.sku,
-    required this.imageUrl,
+    super.id,
+    required super.name,
+    required super.description,
+    required super.category,
+    required super.price,
+    required super.stockQuantity,
+    required super.sku,
+    required super.imageUrl,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -25,15 +25,6 @@ class ProductModel extends Equatable {
     );
   }
 
-  final String id;
-  final String name;
-  final String description;
-  final String category;
-  final double price;
-  final int stockQuantity;
-  final String sku;
-  final String imageUrl;
-
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'name': name,
@@ -45,18 +36,6 @@ class ProductModel extends Equatable {
       'imageUrl': imageUrl,
     };
   }
-
-  @override
-  List<Object> get props => <Object>[
-    id,
-    name,
-    description,
-    category,
-    price,
-    stockQuantity,
-    sku,
-    imageUrl,
-  ];
 
   static String _readString(Map<String, dynamic> json, String key) {
     final Object? value = json[key];

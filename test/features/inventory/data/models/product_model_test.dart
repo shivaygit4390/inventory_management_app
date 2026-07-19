@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management_app/features/inventory/data/models/product_model.dart';
+import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 
 void main() {
   group('ProductModel', () {
@@ -20,6 +21,7 @@ void main() {
       expect(product.price, 799.0);
       expect(product.stockQuantity, 25);
       expect(product.imageUrl, 'assets/images/wireless_mouse.png');
+      expect(product, isA<Product>());
     });
 
     test('accepts numeric strings returned by compatible mock APIs', () {
