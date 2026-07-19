@@ -25,6 +25,19 @@ class ProductModel extends Product {
     );
   }
 
+  factory ProductModel.fromEntity(Product product) {
+    return ProductModel(
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price,
+      stockQuantity: product.stockQuantity,
+      sku: product.sku,
+      imageUrl: product.imageUrl,
+    );
+  }
+
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'name': name,

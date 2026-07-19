@@ -40,6 +40,32 @@ void main() {
       expect(product.stockQuantity, 12);
     });
 
+    test('maps a domain entity into an API model', () {
+      const Product entity = Product(
+        id: '3',
+        name: 'USB-C Hub',
+        description: '6-in-1 USB-C Hub',
+        category: 'Accessories',
+        price: 1499,
+        stockQuantity: 18,
+        sku: 'HUB-003',
+        imageUrl: 'assets/images/usb_c_hub.png',
+      );
+
+      final ProductModel model = ProductModel.fromEntity(entity);
+
+      expect(model.id, entity.id);
+      expect(model.toJson(), <String, Object?>{
+        'name': 'USB-C Hub',
+        'description': '6-in-1 USB-C Hub',
+        'category': 'Accessories',
+        'price': 1499.0,
+        'stockQuantity': 18,
+        'sku': 'HUB-003',
+        'imageUrl': 'assets/images/usb_c_hub.png',
+      });
+    });
+
     test('toJson includes writable fields but excludes server fields', () {
       const ProductModel product = ProductModel(
         id: '3',
