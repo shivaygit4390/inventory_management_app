@@ -55,6 +55,13 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> selectCategory(WidgetTester tester, String category) async {
+    await tester.tap(find.byKey(const Key('product-category-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(category).last);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('shows add mode with the default hosted image URL', (
     WidgetTester tester,
   ) async {
@@ -62,7 +69,8 @@ void main() {
 
     expect(find.text('Add product'), findsNWidgets(2));
     expect(find.widgetWithText(TextFormField, 'Product name'), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(7));
+    expect(find.byType(TextFormField), findsNWidgets(6));
+    expect(find.byKey(const Key('product-category-dropdown')), findsOneWidget);
     expect(find.text(ProductImageConstants.defaultImageUrl), findsOneWidget);
     expect(find.text('Image preview'), findsOneWidget);
   });
@@ -94,10 +102,11 @@ void main() {
     final FormInventoryRepository repository = FormInventoryRepository();
     await pumpForm(tester, repository);
 
+    await selectCategory(tester, 'Electronics');
+
     final List<String> values = <String>[
       '  Wireless Mouse  ',
       '  Ergonomic wireless mouse  ',
-      '  Electronics  ',
       '  WM-001  ',
       '799.50',
       '25',
@@ -159,6 +168,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('fits a wide desktop viewport without layout errors', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpForm(tester, FormInventoryRepository());
+    await tester.pump();
+
+    expect(find.text('Product identity'), findsOneWidget);
+    expect(find.text('Price and stock'), findsOneWidget);
+    expect(find.text('Product image'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows mutation errors and keeps the form open for retry', (
     WidgetTester tester,
   ) async {
@@ -167,10 +193,11 @@ void main() {
     );
     await pumpForm(tester, repository);
 
+    await selectCategory(tester, 'Accessories');
+
     final List<String> values = <String>[
       'USB-C Hub',
       '6-in-1 USB-C Hub',
-      'Accessories',
       'HUB-003',
       '1499',
       '18',

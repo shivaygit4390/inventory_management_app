@@ -31,6 +31,7 @@ class ProductTextFormField extends StatelessWidget {
         hintText: hint,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
         alignLabelWithHint: maxLines > 1,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
       keyboardType: keyboardType,
       textInputAction: textInputAction,

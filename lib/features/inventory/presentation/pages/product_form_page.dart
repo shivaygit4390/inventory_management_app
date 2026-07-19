@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:inventory_management_app/app/widgets/inventory_scaffold.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_state.dart';
+import 'package:inventory_management_app/features/inventory/presentation/widgets/inventory_feedback.dart';
 import 'package:inventory_management_app/features/inventory/presentation/widgets/product_form.dart';
 
 class ProductFormPage extends StatelessWidget {
@@ -33,12 +35,7 @@ class ProductFormPage extends StatelessWidget {
           case InventoryMutationSuccess(:final Product product):
             Navigator.of(context).pop<Product>(product);
           case InventoryMutationFailure(:final String message):
-            final ScaffoldMessengerState messenger = ScaffoldMessenger.of(
-              context,
-            );
-            messenger
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(message)));
+            InventoryFeedback.error(context, message);
           default:
             break;
         }
@@ -50,17 +47,33 @@ class ProductFormPage extends StatelessWidget {
           _ => false,
         };
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(_isEditing ? 'Edit product' : 'Add product'),
-          ),
-          body: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
+        return PopScope(
+          canPop: !isSubmitting,
+          child: InventoryScaffold(
+            appBar: InventoryAppBar(
+              title: _isEditing ? 'Edit product' : 'Add product',
+              subtitle: _isEditing
+                  ? 'Refine product information'
+                  : 'Enter product information',
+              height: 62,
+              useGradientBackground: true,
+              leading: IconButton(
+                tooltip: 'Back',
+                onPressed: isSubmitting
+                    ? null
+                    : () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              ),
+            ),
+            body: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: ResponsivePagePadding(
+                  maxWidth: 1120,
+                  top: 20,
+                  bottom: 42,
                   child: ProductForm(
                     initialProduct: initialProduct,
                     isSubmitting: isSubmitting,

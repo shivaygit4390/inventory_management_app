@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inventory_management_app/app/theme/app_theme.dart';
 import 'package:inventory_management_app/core/constants/product_image_constants.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/validation/product_form_validators.dart';
@@ -24,6 +25,14 @@ class ProductForm extends StatefulWidget {
 }
 
 class _ProductFormState extends State<ProductForm> {
+  static const List<String> _categoryOptions = <String>[
+    'Electronics',
+    'Accessories',
+    'Storage devices',
+    'Audio & Multimedia',
+    'Others',
+  ];
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
@@ -43,7 +52,10 @@ class _ProductFormState extends State<ProductForm> {
     _descriptionController = TextEditingController(
       text: product?.description ?? '',
     );
-    _categoryController = TextEditingController(text: product?.category ?? '');
+    final String initialCategory = product?.category.trim() ?? '';
+    _categoryController = TextEditingController(
+      text: _categoryOptions.contains(initialCategory) ? initialCategory : '',
+    );
     _priceController = TextEditingController(
       text: product == null ? '' : _formatPrice(product.price),
     );
@@ -70,10 +82,12 @@ class _ProductFormState extends State<ProductForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
+    final Widget identitySection = _FormSection(
+      icon: Icons.badge_rounded,
+      iconColor: Theme.of(context).colorScheme.primary,
+      title: 'Product identity',
+      description: 'Give the item a clear name and useful description.',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ProductTextFormField(
             controller: _nameController,
@@ -91,61 +105,86 @@ class _ProductFormState extends State<ProductForm> {
             maxLines: 3,
             validator: ProductFormValidators.description,
           ),
-          const SizedBox(height: 16),
-          _ResponsiveFieldPair(
-            first: ProductTextFormField(
-              controller: _categoryController,
-              label: 'Category',
-              hint: 'e.g. Electronics',
-              prefixIcon: Icons.category_outlined,
-              validator: ProductFormValidators.category,
-            ),
-            second: ProductTextFormField(
-              controller: _skuController,
-              label: 'SKU',
-              hint: 'e.g. WM-001',
-              prefixIcon: Icons.qr_code_outlined,
-              validator: ProductFormValidators.sku,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _ResponsiveFieldPair(
-            first: ProductTextFormField(
-              controller: _priceController,
-              label: 'Price',
-              hint: '0.00',
-              prefixIcon: Icons.currency_rupee,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              validator: ProductFormValidators.price,
-            ),
-            second: ProductTextFormField(
-              controller: _stockQuantityController,
-              label: 'Stock quantity',
-              hint: '0',
-              prefixIcon: Icons.numbers_outlined,
-              keyboardType: TextInputType.number,
-              validator: ProductFormValidators.stockQuantity,
-            ),
-          ),
-          const SizedBox(height: 16),
+        ],
+      ),
+    );
+    final Widget classificationSection = _FormSection(
+      icon: Icons.sell_rounded,
+      iconColor: Theme.of(context).colorScheme.secondary,
+      title: 'Classification',
+      description: 'Organize the item so it is easy to find later.',
+      child: _ResponsiveFieldPair(
+        first: _CategoryDropdownField(
+          controller: _categoryController,
+          categories: _categoryOptions,
+        ),
+        second: ProductTextFormField(
+          controller: _skuController,
+          label: 'SKU',
+          hint: 'e.g. WM-001',
+          prefixIcon: Icons.qr_code_outlined,
+          validator: ProductFormValidators.sku,
+        ),
+      ),
+    );
+    final Widget inventorySection = _FormSection(
+      icon: Icons.analytics_rounded,
+      iconColor: context.inventoryTheme.warning,
+      title: 'Price and stock',
+      description: 'Set the selling price and currently available quantity.',
+      child: _ResponsiveFieldPair(
+        first: ProductTextFormField(
+          controller: _priceController,
+          label: 'Price',
+          hint: '0.00',
+          prefixIcon: Icons.currency_rupee,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          validator: ProductFormValidators.price,
+        ),
+        second: ProductTextFormField(
+          controller: _stockQuantityController,
+          label: 'Stock quantity',
+          hint: '0',
+          prefixIcon: Icons.numbers_outlined,
+          keyboardType: TextInputType.number,
+          validator: ProductFormValidators.stockQuantity,
+        ),
+      ),
+    );
+    final Widget imageSection = _FormSection(
+      icon: Icons.image_rounded,
+      iconColor: context.inventoryTheme.success,
+      title: 'Product image',
+      description: 'Use a secure HTTPS image URL for a reliable preview.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           ProductTextFormField(
             controller: _imageUrlController,
             label: 'Image URL',
             hint: 'https://example.com/product.png',
-            prefixIcon: Icons.image_outlined,
+            prefixIcon: Icons.link_rounded,
             textInputAction: TextInputAction.done,
             validator: ProductFormValidators.imageUrl,
           ),
           const SizedBox(height: 16),
-          Text(
-            'Image preview',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Icon(
+                Icons.visibility_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Image preview',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           AspectRatio(
             aspectRatio: 16 / 9,
             child: ValueListenableBuilder<TextEditingValue>(
@@ -160,29 +199,95 @@ class _ProductFormState extends State<ProductForm> {
                       key: ValueKey<String>(value.text.trim()),
                       imageUrl: value.text.trim(),
                       fit: BoxFit.contain,
-                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                      borderRadius: const BorderRadius.all(Radius.circular(18)),
                     );
                   },
             ),
           ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            key: const Key('product-form-submit'),
-            onPressed: widget.isSubmitting ? null : _submit,
-            icon: widget.isSubmitting
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(_isEditing ? Icons.save_outlined : Icons.add),
-            label: Text(
-              widget.isSubmitting
-                  ? 'Saving…'
-                  : widget.submitLabel ??
-                        (_isEditing ? 'Save changes' : 'Add product'),
-            ),
-          ),
         ],
+      ),
+    );
+
+    return Form(
+      key: _formKey,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final bool useTwoColumns = constraints.maxWidth >= 900;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (useTwoColumns)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          identitySection,
+                          const SizedBox(height: 18),
+                          classificationSection,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          inventorySection,
+                          const SizedBox(height: 18),
+                          imageSection,
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                identitySection,
+                const SizedBox(height: 18),
+                classificationSection,
+                const SizedBox(height: 18),
+                inventorySection,
+                const SizedBox(height: 18),
+                imageSection,
+              ],
+              const SizedBox(height: 22),
+              Align(
+                alignment: useTwoColumns
+                    ? Alignment.centerRight
+                    : Alignment.center,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: useTwoColumns ? 260 : constraints.maxWidth,
+                  ),
+                  child: FilledButton.icon(
+                    key: const Key('product-form-submit'),
+                    onPressed: widget.isSubmitting ? null : _submit,
+                    icon: widget.isSubmitting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Icon(
+                            _isEditing
+                                ? Icons.check_rounded
+                                : Icons.add_rounded,
+                          ),
+                    label: Text(
+                      widget.isSubmitting
+                          ? 'Saving…'
+                          : widget.submitLabel ??
+                                (_isEditing ? 'Save changes' : 'Add product'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -211,6 +316,138 @@ class _ProductFormState extends State<ProductForm> {
     return price == price.roundToDouble()
         ? price.toStringAsFixed(0)
         : price.toString();
+  }
+}
+
+class _FormSection extends StatelessWidget {
+  const _FormSection({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.description,
+    required this.child,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String description;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.inventoryTheme.subtleBorder),
+        boxShadow: context.inventoryTheme.softShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.11),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 38,
+                    child: Icon(icon, color: iconColor, size: 20),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.68,
+                          ),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryDropdownField extends StatefulWidget {
+  const _CategoryDropdownField({
+    required this.controller,
+    required this.categories,
+  });
+
+  final TextEditingController controller;
+  final List<String> categories;
+
+  @override
+  State<_CategoryDropdownField> createState() => _CategoryDropdownFieldState();
+}
+
+class _CategoryDropdownFieldState extends State<_CategoryDropdownField> {
+  @override
+  Widget build(BuildContext context) {
+    final String currentValue = widget.controller.text.trim();
+
+    return DropdownButtonFormField<String>(
+      key: const Key('product-category-dropdown'),
+      initialValue: widget.categories.contains(currentValue)
+          ? currentValue
+          : null,
+      decoration: const InputDecoration(
+        labelText: 'Category',
+        hintText: 'Select category',
+        prefixIcon: Icon(Icons.category_outlined),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+      ),
+      borderRadius: BorderRadius.circular(18),
+      isExpanded: true,
+      items: widget.categories
+          .map(
+            (String category) => DropdownMenuItem<String>(
+              value: category,
+              child: Text(
+                category,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (String? value) {
+        widget.controller.text = value ?? '';
+        setState(() {});
+      },
+      validator: (String? value) => ProductFormValidators.category(value ?? ''),
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+    );
   }
 }
 

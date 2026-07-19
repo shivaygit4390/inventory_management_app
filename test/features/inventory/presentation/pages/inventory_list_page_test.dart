@@ -69,6 +69,16 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> selectProductCategory(
+    WidgetTester tester,
+    String category,
+  ) async {
+    await tester.tap(find.byKey(const Key('product-category-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(category).last);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('shows loading while products are pending', (
     WidgetTester tester,
   ) async {
@@ -130,6 +140,48 @@ void main() {
     expect(image.imageUrl, product.imageUrl);
   });
 
+  testWidgets('opens statistics from an explicit blocking header action', (
+    WidgetTester tester,
+  ) async {
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Inventory overview'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('inventory-statistics-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('inventory-statistics-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text('Inventory statistics'), findsOneWidget);
+    expect(find.text('Inventory overview'), findsOneWidget);
+    expect(find.text('Products'), findsOneWidget);
+    expect(find.text('Units'), findsOneWidget);
+    final ModalBarrier barrier = tester.widget<ModalBarrier>(
+      find.byType(ModalBarrier).last,
+    );
+    expect(barrier.dismissible, isFalse);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Inventory overview'), findsNothing);
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('inventory-statistics-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('close-inventory-statistics')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inventory-statistics-dialog')), findsNothing);
+  });
+
   testWidgets('opens details and receives the selected product', (
     WidgetTester tester,
   ) async {
@@ -168,6 +220,121 @@ void main() {
 
     expect(find.text('Wireless Mouse'), findsOneWidget);
     expect(find.byType(SafeArea), findsWidgets);
+    expect(
+      tester.getSize(find.byKey(const Key('inventory-home-header'))).height,
+      62,
+    );
+    expect(
+      tester.getSize(find.byType(ListView)).height,
+      greaterThanOrEqualTo(525),
+    );
+    final BuildContext productContext = tester.element(
+      find.text('Wireless Mouse'),
+    );
+    expect(Theme.of(productContext).textTheme.bodyMedium?.fontFamily, 'Inter');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('adapts the inventory list to phone landscape', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(700, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ListView), findsOneWidget);
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Inventory overview'), findsNothing);
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses a three-column product grid on wide layouts', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final GridView grid = tester.widget<GridView>(find.byType(GridView));
+    final SliverGridDelegateWithFixedCrossAxisCount delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 3);
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Inventory overview'), findsNothing);
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+    expect(find.text('Mechanical Keyboard'), findsOneWidget);
+    expect(find.text('USB-C Hub'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('adapts product details to a tablet layout', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Wireless Mouse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product details'), findsOneWidget);
+    expect(find.text('About this product'), findsOneWidget);
+    expect(find.text('WM-001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses a two-plus-one details grid on narrow phones', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Wireless Mouse'));
+    await tester.pumpAndSettle();
+
+    final Offset skuPosition = tester.getTopLeft(find.text('SKU'));
+    final Offset stockPosition = tester.getTopLeft(find.text('Stock quantity'));
+    final Offset availabilityPosition = tester.getTopLeft(
+      find.text('Availability'),
+    );
+    expect(skuPosition.dy, stockPosition.dy);
+    expect(availabilityPosition.dy, greaterThan(stockPosition.dy));
     expect(tester.takeException(), isNull);
   });
 
@@ -182,11 +349,12 @@ void main() {
     await tester.tap(find.text('Add product'));
     await tester.pumpAndSettle();
 
+    await selectProductCategory(tester, 'Accessories');
+
     final Finder fields = find.byType(TextFormField);
     final List<String> values = <String>[
       'USB-C Hub',
       '6-in-1 USB-C Hub',
-      'Accessories',
       'HUB-003',
       '1499',
       '18',
@@ -268,12 +436,45 @@ void main() {
     expect(find.text('Mechanical Keyboard'), findsOneWidget);
     expect(find.text('Wireless Mouse'), findsNothing);
     expect(find.text('USB-C Hub'), findsNothing);
-    expect(find.text('1 of 3 products'), findsOneWidget);
+    expect(find.text('1 of 3 products'), findsNothing);
 
     await tester.tap(find.byTooltip('Clear search'));
     await tester.pump();
     expect(find.text('Wireless Mouse'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -360));
+    await tester.pump();
     expect(find.text('USB-C Hub'), findsOneWidget);
+  });
+
+  testWidgets('keeps header and filters visible while scrolling', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.byKey(const Key('inventory-search-field')), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -260));
+    await tester.pumpAndSettle();
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.byKey(const Key('inventory-search-field')), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 24));
+    await tester.pumpAndSettle();
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.byKey(const Key('inventory-search-field')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('combines category filtering with the current search', (
@@ -294,7 +495,7 @@ void main() {
 
     expect(find.text('USB-C Hub'), findsOneWidget);
     expect(find.text('Wireless Mouse'), findsNothing);
-    expect(find.text('1 of 3 products'), findsOneWidget);
+    expect(find.text('1 of 3 products'), findsNothing);
 
     await tester.enterText(
       find.byKey(const Key('inventory-search-field')),
@@ -303,7 +504,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('No matching products'), findsOneWidget);
-    expect(find.text('0 of 3 products'), findsOneWidget);
+    expect(find.text('0 of 3 products'), findsNothing);
   });
 
   testWidgets('cancels deletion without changing inventory', (
@@ -367,6 +568,8 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
+    await tester.drag(find.byType(ListView), const Offset(0, -220));
+    await tester.pump();
     expect(find.text('USB-C Hub'), findsOneWidget);
     expect(repository.getCalls, 2);
   });
