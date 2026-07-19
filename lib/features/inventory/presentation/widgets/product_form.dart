@@ -412,26 +412,115 @@ class _CategoryDropdownField extends StatefulWidget {
 }
 
 class _CategoryDropdownFieldState extends State<_CategoryDropdownField> {
+  String? _errorText;
+
   @override
   Widget build(BuildContext context) {
     final String currentValue = widget.controller.text.trim();
+    final ThemeData theme = Theme.of(context);
+    final String displayedValue = currentValue.isEmpty
+        ? 'Select category'
+        : currentValue;
 
-    return DropdownButtonFormField<String>(
+    return FormField<String>(
       key: const Key('product-category-dropdown'),
       initialValue: widget.categories.contains(currentValue)
           ? currentValue
           : null,
-      decoration: const InputDecoration(
-        labelText: 'Category',
-        hintText: 'Select category',
-        prefixIcon: Icon(Icons.category_outlined),
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-      ),
-      borderRadius: BorderRadius.circular(18),
-      isExpanded: true,
+      validator: (_) =>
+          ProductFormValidators.category(widget.controller.text.trim()),
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      builder: (FormFieldState<String> fieldState) {
+        _errorText = fieldState.errorText;
+
+        return Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () async {
+              final String? selectedCategory = await _showCategoryMenu(context);
+              if (selectedCategory == null) {
+                return;
+              }
+              widget.controller.text = selectedCategory;
+              fieldState.didChange(selectedCategory);
+              setState(() {});
+            },
+            child: InputDecorator(
+              isEmpty: currentValue.isEmpty,
+              decoration: InputDecoration(
+                labelText: 'Category',
+                prefixIcon: const Icon(Icons.category_outlined),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                errorText: _errorText,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayedValue,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: currentValue.isEmpty
+                            ? theme.colorScheme.onSurfaceVariant
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _showCategoryMenu(BuildContext context) {
+    final RenderBox fieldBox = context.findRenderObject()! as RenderBox;
+    final RenderBox overlayBox =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final Offset fieldOffset = fieldBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayBox,
+    );
+    const double menuVerticalGap = 4;
+    const double estimatedMenuHeight = 256;
+    final double spaceBelow =
+        overlayBox.size.height - fieldOffset.dy - fieldBox.size.height;
+    final bool openAbove = spaceBelow < estimatedMenuHeight;
+    final double menuTop = openAbove
+        ? (fieldOffset.dy - estimatedMenuHeight - menuVerticalGap).clamp(
+            0,
+            overlayBox.size.height,
+          )
+        : fieldOffset.dy + fieldBox.size.height + menuVerticalGap;
+    final double menuBottom = openAbove
+        ? overlayBox.size.height - fieldOffset.dy + menuVerticalGap
+        : 0;
+    final RelativeRect position = RelativeRect.fromLTRB(
+      fieldOffset.dx,
+      menuTop,
+      overlayBox.size.width - fieldOffset.dx - fieldBox.size.width,
+      menuBottom,
+    );
+
+    return showMenu<String>(
+      context: context,
+      position: position,
+      constraints: BoxConstraints(minWidth: fieldBox.size.width),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      popUpAnimationStyle: AnimationStyle.noAnimation,
       items: widget.categories
           .map(
-            (String category) => DropdownMenuItem<String>(
+            (String category) => PopupMenuItem<String>(
               value: category,
               child: Text(
                 category,
@@ -441,12 +530,6 @@ class _CategoryDropdownFieldState extends State<_CategoryDropdownField> {
             ),
           )
           .toList(),
-      onChanged: (String? value) {
-        widget.controller.text = value ?? '';
-        setState(() {});
-      },
-      validator: (String? value) => ProductFormValidators.category(value ?? ''),
-      autovalidateMode: AutovalidateMode.onUserInteraction,
     );
   }
 }
