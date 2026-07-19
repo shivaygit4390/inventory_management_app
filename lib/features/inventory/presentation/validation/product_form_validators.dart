@@ -1,3 +1,5 @@
+import 'package:inventory_management_app/core/utils/url_validator.dart';
+
 abstract final class ProductFormValidators {
   static String? name(String? value) =>
       _requiredText(value, fieldName: 'Product name', maximumLength: 100);
@@ -11,8 +13,21 @@ abstract final class ProductFormValidators {
   static String? sku(String? value) =>
       _requiredText(value, fieldName: 'SKU', maximumLength: 50);
 
-  static String? imageUrl(String? value) =>
-      _requiredText(value, fieldName: 'Image path', maximumLength: 250);
+  static String? imageUrl(String? value) {
+    final String normalizedValue = value?.trim() ?? '';
+    if (normalizedValue.isEmpty) {
+      return 'Image URL is required.';
+    }
+    if (normalizedValue.length > 2048) {
+      return 'Image URL must be 2048 characters or fewer.';
+    }
+
+    if (!UrlValidator.isHttps(normalizedValue)) {
+      return 'Enter a valid HTTPS image URL.';
+    }
+
+    return null;
+  }
 
   static String? price(String? value) {
     final String normalizedValue = value?.trim() ?? '';

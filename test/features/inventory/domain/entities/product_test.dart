@@ -10,7 +10,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   group('Product', () {
@@ -23,7 +23,7 @@ void main() {
         price: 799,
         stockQuantity: 25,
         sku: 'WM-001',
-        imageUrl: 'assets/images/wireless_mouse.png',
+        imageUrl: 'https://cdn.example.com/wireless_mouse.png',
       );
 
       expect(product, matchingProduct);
@@ -37,7 +37,7 @@ void main() {
         price: 1499,
         stockQuantity: 0,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
 
       expect(product.isInStock, isTrue);

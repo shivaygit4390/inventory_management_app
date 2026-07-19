@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:inventory_management_app/core/constants/product_image_constants.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/validation/product_form_validators.dart';
+import 'package:inventory_management_app/features/inventory/presentation/widgets/product_image.dart';
 import 'package:inventory_management_app/features/inventory/presentation/widgets/product_text_form_field.dart';
 
 class ProductForm extends StatefulWidget {
@@ -49,7 +51,9 @@ class _ProductFormState extends State<ProductForm> {
       text: product?.stockQuantity.toString() ?? '',
     );
     _skuController = TextEditingController(text: product?.sku ?? '');
-    _imageUrlController = TextEditingController(text: product?.imageUrl ?? '');
+    _imageUrlController = TextEditingController(
+      text: product?.imageUrl ?? ProductImageConstants.defaultImageUrl,
+    );
   }
 
   @override
@@ -128,11 +132,38 @@ class _ProductFormState extends State<ProductForm> {
           const SizedBox(height: 16),
           ProductTextFormField(
             controller: _imageUrlController,
-            label: 'Image path',
-            hint: 'assets/images/product.png',
+            label: 'Image URL',
+            hint: 'https://example.com/product.png',
             prefixIcon: Icons.image_outlined,
             textInputAction: TextInputAction.done,
             validator: ProductFormValidators.imageUrl,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Image preview',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _imageUrlController,
+              builder:
+                  (
+                    BuildContext context,
+                    TextEditingValue value,
+                    Widget? child,
+                  ) {
+                    return ProductImage.fromUrl(
+                      key: ValueKey<String>(value.text.trim()),
+                      imageUrl: value.text.trim(),
+                      fit: BoxFit.contain,
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    );
+                  },
+            ),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

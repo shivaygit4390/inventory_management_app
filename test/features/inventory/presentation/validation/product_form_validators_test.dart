@@ -11,7 +11,7 @@ void main() {
       );
       expect(ProductFormValidators.category(''), 'Category is required.');
       expect(ProductFormValidators.sku(' '), 'SKU is required.');
-      expect(ProductFormValidators.imageUrl(null), 'Image path is required.');
+      expect(ProductFormValidators.imageUrl(null), 'Image URL is required.');
     });
 
     test('validates positive finite prices', () {
@@ -47,6 +47,27 @@ void main() {
         'Product name must be 100 characters or fewer.',
       );
       expect(ProductFormValidators.name('Mouse'), isNull);
+    });
+
+    test('accepts only well-formed HTTPS image URLs', () {
+      expect(
+        ProductFormValidators.imageUrl('http://example.com/product.png'),
+        'Enter a valid HTTPS image URL.',
+      );
+      expect(
+        ProductFormValidators.imageUrl('assets/images/product.png'),
+        'Enter a valid HTTPS image URL.',
+      );
+      expect(
+        ProductFormValidators.imageUrl('https:///missing-host.png'),
+        'Enter a valid HTTPS image URL.',
+      );
+      expect(
+        ProductFormValidators.imageUrl(
+          '  https://cdn.example.com/product.png  ',
+        ),
+        isNull,
+      );
     });
   });
 }

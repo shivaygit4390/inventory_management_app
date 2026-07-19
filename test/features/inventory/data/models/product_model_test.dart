@@ -4,7 +4,7 @@ import 'package:inventory_management_app/features/inventory/domain/entities/prod
 
 void main() {
   group('ProductModel', () {
-    test('maps API JSON and preserves the local image asset path', () {
+    test('maps API JSON and preserves the hosted image URL', () {
       final ProductModel product = ProductModel.fromJson(<String, dynamic>{
         'createdAt': '2026-07-18T05:10:28.002Z',
         'id': '1',
@@ -14,13 +14,13 @@ void main() {
         'price': 799,
         'stockQuantity': 25,
         'sku': 'WM-001',
-        'imageUrl': 'assets/images/wireless_mouse.png',
+        'imageUrl': 'https://cdn.example.com/wireless_mouse.png',
       });
 
       expect(product.id, '1');
       expect(product.price, 799.0);
       expect(product.stockQuantity, 25);
-      expect(product.imageUrl, 'assets/images/wireless_mouse.png');
+      expect(product.imageUrl, 'https://cdn.example.com/wireless_mouse.png');
       expect(product, isA<Product>());
     });
 
@@ -33,7 +33,7 @@ void main() {
         'price': '2499.0',
         'stockQuantity': '12',
         'sku': 'KB-002',
-        'imageUrl': 'assets/images/mechanical_keyboard.png',
+        'imageUrl': 'https://cdn.example.com/mechanical_keyboard.png',
       });
 
       expect(product.price, 2499.0);
@@ -49,7 +49,7 @@ void main() {
         price: 1499,
         stockQuantity: 18,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
 
       final ProductModel model = ProductModel.fromEntity(entity);
@@ -62,7 +62,7 @@ void main() {
         'price': 1499.0,
         'stockQuantity': 18,
         'sku': 'HUB-003',
-        'imageUrl': 'assets/images/usb_c_hub.png',
+        'imageUrl': 'https://cdn.example.com/usb_c_hub.png',
       });
     });
 
@@ -75,7 +75,7 @@ void main() {
         price: 1499,
         stockQuantity: 18,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
 
       expect(product.toJson(), <String, Object?>{
@@ -85,7 +85,7 @@ void main() {
         'price': 1499.0,
         'stockQuantity': 18,
         'sku': 'HUB-003',
-        'imageUrl': 'assets/images/usb_c_hub.png',
+        'imageUrl': 'https://cdn.example.com/usb_c_hub.png',
       });
       expect(product.toJson(), isNot(contains('id')));
       expect(product.toJson(), isNot(contains('createdAt')));
@@ -101,7 +101,7 @@ void main() {
           'price': 799,
           'stockQuantity': 2.5,
           'sku': 'WM-001',
-          'imageUrl': 'assets/images/wireless_mouse.png',
+          'imageUrl': 'https://cdn.example.com/wireless_mouse.png',
         }),
         throwsFormatException,
       );

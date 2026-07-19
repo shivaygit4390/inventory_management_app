@@ -10,6 +10,7 @@ import 'package:inventory_management_app/features/inventory/domain/use_cases/cre
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
+import 'package:inventory_management_app/features/inventory/presentation/widgets/product_image.dart';
 
 void main() {
   const Product product = Product(
@@ -20,7 +21,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   Future<void> pumpInventoryApp(
@@ -36,6 +37,14 @@ void main() {
         ),
       ),
     );
+  }
+
+  Future<void> tapFormSubmit(WidgetTester tester) async {
+    final Finder submitButton = find.byKey(const Key('product-form-submit'));
+    final FilledButton button = tester.widget<FilledButton>(submitButton);
+    expect(button.onPressed, isNotNull);
+    button.onPressed!();
+    await tester.pump();
   }
 
   testWidgets('shows loading while products are pending', (
@@ -80,7 +89,7 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
   });
 
-  testWidgets('renders products using their local asset paths', (
+  testWidgets('renders products using their hosted image URLs', (
     WidgetTester tester,
   ) async {
     await pumpInventoryApp(
@@ -93,9 +102,10 @@ void main() {
 
     expect(find.text('Wireless Mouse'), findsOneWidget);
     expect(find.text('₹799.00'), findsOneWidget);
-    final Image image = tester.widget<Image>(find.byType(Image).first);
-    expect(image.image, isA<AssetImage>());
-    expect((image.image as AssetImage).assetName, product.imageUrl);
+    final ProductImage image = tester.widget<ProductImage>(
+      find.byType(ProductImage).first,
+    );
+    expect(image.imageUrl, product.imageUrl);
   });
 
   testWidgets('opens details and receives the selected product', (
@@ -158,13 +168,13 @@ void main() {
       'HUB-003',
       '1499',
       '18',
-      'assets/images/usb_c_hub.png',
+      'https://cdn.example.com/usb_c_hub.png',
     ];
     for (int index = 0; index < values.length; index++) {
       await tester.enterText(fields.at(index), values[index]);
     }
 
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tapFormSubmit(tester);
     await tester.pump();
 
     final FilledButton disabledButton = tester.widget<FilledButton>(
@@ -203,7 +213,7 @@ void main() {
       find.byType(TextFormField).first,
       'Wireless Mouse Pro',
     );
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tapFormSubmit(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Product details'), findsOneWidget);

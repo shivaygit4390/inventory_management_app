@@ -14,7 +14,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   late RecordingRemoteDataSource remoteDataSource;
@@ -46,7 +46,7 @@ void main() {
         price: 1499,
         stockQuantity: 18,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
 
       await repository.createProduct(newProduct);
@@ -64,7 +64,7 @@ void main() {
         price: 899,
         stockQuantity: 20,
         sku: 'WM-001',
-        imageUrl: 'assets/images/wireless_mouse.png',
+        imageUrl: 'https://cdn.example.com/wireless_mouse.png',
       );
 
       await repository.updateProduct(updatedProduct);

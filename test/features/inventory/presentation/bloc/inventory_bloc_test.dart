@@ -18,7 +18,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   InventoryBloc createBloc(InventoryRepository repository) {
@@ -128,7 +128,7 @@ void main() {
         price: 1499,
         stockQuantity: 18,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
       const Product createdProduct = Product(
         id: '3',
@@ -138,7 +138,7 @@ void main() {
         price: 1499,
         stockQuantity: 18,
         sku: 'HUB-003',
-        imageUrl: 'assets/images/usb_c_hub.png',
+        imageUrl: 'https://cdn.example.com/usb_c_hub.png',
       );
       final MutationInventoryRepository repository =
           MutationInventoryRepository(
@@ -182,7 +182,7 @@ void main() {
         price: 999,
         stockQuantity: 20,
         sku: 'WM-001',
-        imageUrl: 'assets/images/wireless_mouse.png',
+        imageUrl: 'https://cdn.example.com/wireless_mouse.png',
       );
       final MutationInventoryRepository repository =
           MutationInventoryRepository(products: <Product>[product]);

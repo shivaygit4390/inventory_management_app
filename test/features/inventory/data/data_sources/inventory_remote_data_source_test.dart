@@ -18,7 +18,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   Map<String, Object?> productJson({String id = '1'}) {

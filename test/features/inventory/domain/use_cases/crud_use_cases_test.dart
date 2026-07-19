@@ -16,7 +16,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   late RecordingInventoryRepository repository;
@@ -69,7 +69,7 @@ void main() {
         price: 100,
         stockQuantity: 1,
         sku: 'NEW-001',
-        imageUrl: 'assets/images/wireless_mouse.png',
+        imageUrl: 'https://cdn.example.com/wireless_mouse.png',
       );
       final UpdateProduct useCase = UpdateProduct(repository);
 

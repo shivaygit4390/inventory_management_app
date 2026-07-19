@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inventory_management_app/core/constants/product_image_constants.dart';
 import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
@@ -19,7 +20,7 @@ void main() {
     price: 799,
     stockQuantity: 25,
     sku: 'WM-001',
-    imageUrl: 'assets/images/wireless_mouse.png',
+    imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
 
   Future<void> pumpForm(
@@ -44,12 +45,24 @@ void main() {
     );
   }
 
-  testWidgets('shows add mode with empty fields', (WidgetTester tester) async {
+  Future<void> tapSubmit(WidgetTester tester) async {
+    final Finder submitButton = find.byKey(const Key('product-form-submit'));
+    final FilledButton button = tester.widget<FilledButton>(submitButton);
+    expect(button.onPressed, isNotNull);
+    button.onPressed!();
+    await tester.pump();
+  }
+
+  testWidgets('shows add mode with the default hosted image URL', (
+    WidgetTester tester,
+  ) async {
     await pumpForm(tester, FormInventoryRepository());
 
     expect(find.text('Add product'), findsNWidgets(2));
     expect(find.widgetWithText(TextFormField, 'Product name'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(7));
+    expect(find.text(ProductImageConstants.defaultImageUrl), findsOneWidget);
+    expect(find.text('Image preview'), findsOneWidget);
   });
 
   testWidgets('shows required errors and does not submit an invalid form', (
@@ -58,7 +71,9 @@ void main() {
     final FormInventoryRepository repository = FormInventoryRepository();
     await pumpForm(tester, repository);
 
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tester.enterText(find.byType(TextFormField).last, '');
+
+    await tapSubmit(tester);
     await tester.pump();
 
     expect(find.text('Product name is required.'), findsOneWidget);
@@ -67,7 +82,7 @@ void main() {
     expect(find.text('Price is required.'), findsOneWidget);
     expect(find.text('Stock quantity is required.'), findsOneWidget);
     expect(find.text('SKU is required.'), findsOneWidget);
-    expect(find.text('Image path is required.'), findsOneWidget);
+    expect(find.text('Image URL is required.'), findsOneWidget);
     expect(repository.createdProduct, isNull);
   });
 
@@ -84,14 +99,14 @@ void main() {
       '  WM-001  ',
       '799.50',
       '25',
-      '  assets/images/wireless_mouse.png  ',
+      '  https://cdn.example.com/wireless_mouse.png  ',
     ];
     final Finder fields = find.byType(TextFormField);
     for (int index = 0; index < values.length; index++) {
       await tester.enterText(fields.at(index), values[index]);
     }
 
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tapSubmit(tester);
     await tester.pumpAndSettle();
 
     expect(
@@ -103,7 +118,7 @@ void main() {
         price: 799.5,
         stockQuantity: 25,
         sku: 'WM-001',
-        imageUrl: 'assets/images/wireless_mouse.png',
+        imageUrl: 'https://cdn.example.com/wireless_mouse.png',
       ),
     );
   });
@@ -121,7 +136,7 @@ void main() {
     expect(find.text('Wireless Mouse'), findsOneWidget);
     expect(find.text('WM-001'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tapSubmit(tester);
     await tester.pumpAndSettle();
 
     expect(repository.updatedProduct, existingProduct);
@@ -157,14 +172,14 @@ void main() {
       'HUB-003',
       '1499',
       '18',
-      'assets/images/usb_c_hub.png',
+      'https://cdn.example.com/usb_c_hub.png',
     ];
     final Finder fields = find.byType(TextFormField);
     for (int index = 0; index < values.length; index++) {
       await tester.enterText(fields.at(index), values[index]);
     }
 
-    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tapSubmit(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to reach the server.'), findsOneWidget);
