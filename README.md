@@ -185,9 +185,4 @@ Build an Android APK:
 flutter build apk --release
 ```
 
-## Submission Notes
 
-- Add the screenshots listed above before final submission.
-- Record the demo video manually if required.
-- Build the APK manually if required.
-- Keep `project_learning/` out of Git; it is for local learning documentation only.
