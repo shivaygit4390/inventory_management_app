@@ -2,13 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management_app/app/app.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
 
 void main() {
   testWidgets('starts the inventory application', (WidgetTester tester) async {
     final InventoryBloc bloc = InventoryBloc(
       GetProducts(const EmptyInventoryRepository()),
+      CreateProduct(const EmptyInventoryRepository()),
+      UpdateProduct(const EmptyInventoryRepository()),
     );
 
     await tester.pumpWidget(InventoryApp(inventoryBloc: bloc));

@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
+import 'package:inventory_management_app/features/inventory/presentation/pages/product_form_page.dart';
 import 'package:inventory_management_app/features/inventory/presentation/widgets/product_image.dart';
 
-class ProductDetailsPage extends StatelessWidget {
+class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({required this.product, super.key});
 
   final Product product;
+
+  @override
+  State<ProductDetailsPage> createState() => _ProductDetailsPageState();
+}
+
+class _ProductDetailsPageState extends State<ProductDetailsPage> {
+  late Product _product;
+
+  @override
+  void initState() {
+    super.initState();
+    _product = widget.product;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +27,16 @@ class ProductDetailsPage extends StatelessWidget {
     final ColorScheme colors = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Product details')),
+      appBar: AppBar(
+        title: const Text('Product details'),
+        actions: [
+          IconButton(
+            tooltip: 'Edit product',
+            onPressed: _openEditProduct,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -27,9 +50,9 @@ class ProductDetailsPage extends StatelessWidget {
                   AspectRatio(
                     aspectRatio: 16 / 10,
                     child: Hero(
-                      tag: 'product-image-${product.id}',
+                      tag: 'product-image-${_product.id}',
                       child: ProductImage(
-                        product: product,
+                        product: _product,
                         width: double.infinity,
                         fit: BoxFit.contain,
                         borderRadius: const BorderRadius.all(
@@ -44,19 +67,19 @@ class ProductDetailsPage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          product.name,
+                          _product.name,
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Chip(label: Text(product.category)),
+                      Chip(label: Text(_product.category)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '₹${product.price.toStringAsFixed(2)}',
+                    '₹${_product.price.toStringAsFixed(2)}',
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: colors.primary,
                       fontWeight: FontWeight.w700,
@@ -71,7 +94,7 @@ class ProductDetailsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    product.description,
+                    _product.description,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                       height: 1.5,
@@ -84,19 +107,19 @@ class ProductDetailsPage extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          _DetailRow(label: 'SKU', value: product.sku),
+                          _DetailRow(label: 'SKU', value: _product.sku),
                           const Divider(height: 24),
                           _DetailRow(
                             label: 'Stock quantity',
-                            value: '${product.stockQuantity}',
+                            value: '${_product.stockQuantity}',
                           ),
                           const Divider(height: 24),
                           _DetailRow(
                             label: 'Availability',
-                            value: product.isInStock
+                            value: _product.isInStock
                                 ? 'In stock'
                                 : 'Out of stock',
-                            valueColor: product.isInStock
+                            valueColor: _product.isInStock
                                 ? colors.tertiary
                                 : colors.error,
                           ),
@@ -110,6 +133,23 @@ class ProductDetailsPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _openEditProduct() async {
+    final Product? updatedProduct = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (BuildContext context) =>
+            ProductFormPage(initialProduct: _product),
+      ),
+    );
+    if (!mounted || updatedProduct == null) {
+      return;
+    }
+
+    setState(() => _product = updatedProduct);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${updatedProduct.name} was updated.')),
     );
   }
 }

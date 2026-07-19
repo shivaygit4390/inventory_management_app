@@ -8,12 +8,14 @@ class ProductForm extends StatefulWidget {
     required this.onSubmit,
     this.initialProduct,
     this.submitLabel,
+    this.isSubmitting = false,
     super.key,
   });
 
   final Product? initialProduct;
   final ValueChanged<Product> onSubmit;
   final String? submitLabel;
+  final bool isSubmitting;
 
   @override
   State<ProductForm> createState() => _ProductFormState();
@@ -135,11 +137,18 @@ class _ProductFormState extends State<ProductForm> {
           const SizedBox(height: 24),
           FilledButton.icon(
             key: const Key('product-form-submit'),
-            onPressed: _submit,
-            icon: Icon(_isEditing ? Icons.save_outlined : Icons.add),
+            onPressed: widget.isSubmitting ? null : _submit,
+            icon: widget.isSubmitting
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(_isEditing ? Icons.save_outlined : Icons.add),
             label: Text(
-              widget.submitLabel ??
-                  (_isEditing ? 'Save changes' : 'Add product'),
+              widget.isSubmitting
+                  ? 'Saving…'
+                  : widget.submitLabel ??
+                        (_isEditing ? 'Save changes' : 'Add product'),
             ),
           ),
         ],

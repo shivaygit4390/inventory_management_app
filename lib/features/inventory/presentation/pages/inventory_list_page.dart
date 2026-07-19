@@ -5,6 +5,7 @@ import 'package:inventory_management_app/features/inventory/presentation/bloc/in
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_state.dart';
 import 'package:inventory_management_app/features/inventory/presentation/pages/product_details_page.dart';
+import 'package:inventory_management_app/features/inventory/presentation/pages/product_form_page.dart';
 import 'package:inventory_management_app/features/inventory/presentation/widgets/inventory_status_view.dart';
 import 'package:inventory_management_app/features/inventory/presentation/widgets/product_card.dart';
 
@@ -26,15 +27,26 @@ class _InventoryListPageState extends State<InventoryListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Inventory')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAddProduct(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Add product'),
+      ),
       body: BlocBuilder<InventoryBloc, InventoryState>(
         builder: (BuildContext context, InventoryState state) {
           return switch (state) {
             InventoryInitial() || InventoryLoading() => const Center(
               child: CircularProgressIndicator(),
             ),
-            InventoryLoaded(:final List<Product> products) => _ProductList(
-              products: products,
-            ),
+            InventoryProductsState(:final List<Product> products) =>
+              products.isEmpty
+                  ? const InventoryStatusView(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No products yet',
+                      message:
+                          'Products added to your inventory will appear here.',
+                    )
+                  : _ProductList(products: products),
             InventoryEmpty() => const InventoryStatusView(
               icon: Icons.inventory_2_outlined,
               title: 'No products yet',
@@ -52,6 +64,21 @@ class _InventoryListPageState extends State<InventoryListPage> {
           };
         },
       ),
+    );
+  }
+
+  Future<void> _openAddProduct(BuildContext context) async {
+    final Product? createdProduct = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (BuildContext context) => const ProductFormPage(),
+      ),
+    );
+    if (!context.mounted || createdProduct == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${createdProduct.name} was added.')),
     );
   }
 }

@@ -6,7 +6,9 @@ import 'package:inventory_management_app/app/app.dart';
 import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
 
 void main() {
@@ -26,7 +28,13 @@ void main() {
     InventoryRepository repository,
   ) {
     return tester.pumpWidget(
-      InventoryApp(inventoryBloc: InventoryBloc(GetProducts(repository))),
+      InventoryApp(
+        inventoryBloc: InventoryBloc(
+          GetProducts(repository),
+          CreateProduct(repository),
+          UpdateProduct(repository),
+        ),
+      ),
     );
   }
 
@@ -130,6 +138,83 @@ void main() {
     expect(find.byType(SafeArea), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('creates a product, disables submit, and refreshes the list', (
+    WidgetTester tester,
+  ) async {
+    final PendingCreateInventoryRepository repository =
+        PendingCreateInventoryRepository();
+    await pumpInventoryApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add product'));
+    await tester.pumpAndSettle();
+
+    final Finder fields = find.byType(TextFormField);
+    final List<String> values = <String>[
+      'USB-C Hub',
+      '6-in-1 USB-C Hub',
+      'Accessories',
+      'HUB-003',
+      '1499',
+      '18',
+      'assets/images/usb_c_hub.png',
+    ];
+    for (int index = 0; index < values.length; index++) {
+      await tester.enterText(fields.at(index), values[index]);
+    }
+
+    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tester.pump();
+
+    final FilledButton disabledButton = tester.widget<FilledButton>(
+      find.byKey(const Key('product-form-submit')),
+    );
+    expect(disabledButton.onPressed, isNull);
+    expect(find.text('Saving…'), findsOneWidget);
+
+    repository.completeCreate();
+    await tester.pumpAndSettle();
+
+    expect(find.text('USB-C Hub'), findsOneWidget);
+    expect(find.text('USB-C Hub was added.'), findsOneWidget);
+    expect(repository.getCalls, 2);
+  });
+
+  testWidgets('prefills, updates, and refreshes a selected product', (
+    WidgetTester tester,
+  ) async {
+    final MutableInventoryRepository repository = MutableInventoryRepository(
+      <Product>[product],
+    );
+    await pumpInventoryApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Wireless Mouse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit product'), findsOneWidget);
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+    expect(find.text('WM-001'), findsOneWidget);
+
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'Wireless Mouse Pro',
+    );
+    await tester.tap(find.byKey(const Key('product-form-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product details'), findsOneWidget);
+    expect(find.text('Wireless Mouse Pro'), findsOneWidget);
+    expect(find.text('Wireless Mouse Pro was updated.'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Wireless Mouse Pro'), findsOneWidget);
+    expect(repository.getCalls, 2);
+  });
 }
 
 final class ControlledInventoryRepository implements InventoryRepository {
@@ -172,4 +257,76 @@ final class FailingInventoryRepository implements InventoryRepository {
 
   @override
   Future<void> deleteProduct(String id) => throw UnimplementedError();
+}
+
+class MutableInventoryRepository implements InventoryRepository {
+  MutableInventoryRepository(List<Product> products)
+    : products = List<Product>.of(products);
+
+  final List<Product> products;
+  int getCalls = 0;
+
+  @override
+  Future<List<Product>> getProducts() async {
+    getCalls += 1;
+    return List<Product>.of(products);
+  }
+
+  @override
+  Future<Product> createProduct(Product product) async {
+    final Product savedProduct = _withId(product, '${products.length + 1}');
+    products.add(savedProduct);
+    return savedProduct;
+  }
+
+  @override
+  Future<Product> updateProduct(Product product) async {
+    final int index = products.indexWhere(
+      (Product currentProduct) => currentProduct.id == product.id,
+    );
+    products[index] = product;
+    return product;
+  }
+
+  static Product _withId(Product product, String id) {
+    return Product(
+      id: id,
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price,
+      stockQuantity: product.stockQuantity,
+      sku: product.sku,
+      imageUrl: product.imageUrl,
+    );
+  }
+
+  @override
+  Future<Product> getProduct(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteProduct(String id) => throw UnimplementedError();
+}
+
+final class PendingCreateInventoryRepository
+    extends MutableInventoryRepository {
+  PendingCreateInventoryRepository() : super(<Product>[]);
+
+  final Completer<Product> _createCompleter = Completer<Product>();
+  Product? _draftProduct;
+
+  @override
+  Future<Product> createProduct(Product product) async {
+    _draftProduct = product;
+    final Product savedProduct = await _createCompleter.future;
+    products.add(savedProduct);
+    return savedProduct;
+  }
+
+  void completeCreate() {
+    final Product draftProduct = _draftProduct!;
+    _createCompleter.complete(
+      MutableInventoryRepository._withId(draftProduct, '1'),
+    );
+  }
 }

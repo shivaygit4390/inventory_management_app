@@ -8,7 +8,9 @@ import 'package:inventory_management_app/core/network/api_client.dart';
 import 'package:inventory_management_app/features/inventory/data/data_sources/inventory_remote_data_source.dart';
 import 'package:inventory_management_app/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:inventory_management_app/features/inventory/presentation/pages/inventory_list_page.dart';
 
@@ -43,7 +45,11 @@ class _InventoryAppState extends State<InventoryApp> {
     final InventoryRepository repository = InventoryRepositoryImpl(
       remoteDataSource,
     );
-    _inventoryBloc = InventoryBloc(GetProducts(repository));
+    _inventoryBloc = InventoryBloc(
+      GetProducts(repository),
+      CreateProduct(repository),
+      UpdateProduct(repository),
+    );
   }
 
   @override
