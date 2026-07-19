@@ -6,6 +6,7 @@ import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/delete_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
@@ -32,6 +33,7 @@ void main() {
       GetProducts(repository),
       CreateProduct(repository),
       UpdateProduct(repository),
+      DeleteProduct(repository),
     );
     addTearDown(bloc.close);
 

@@ -3,6 +3,7 @@ import 'package:inventory_management_app/app/app.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/delete_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
@@ -13,6 +14,7 @@ void main() {
       GetProducts(const EmptyInventoryRepository()),
       CreateProduct(const EmptyInventoryRepository()),
       UpdateProduct(const EmptyInventoryRepository()),
+      DeleteProduct(const EmptyInventoryRepository()),
     );
 
     await tester.pumpWidget(InventoryApp(inventoryBloc: bloc));

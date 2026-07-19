@@ -8,7 +8,7 @@ sealed class InventoryState extends Equatable {
   List<Object> get props => const <Object>[];
 }
 
-enum InventoryMutationType { create, update }
+enum InventoryMutationType { create, update, delete }
 
 final class InventoryInitial extends InventoryState {
   const InventoryInitial();
@@ -30,6 +30,19 @@ sealed class InventoryProductsState extends InventoryState {
 
 final class InventoryLoaded extends InventoryProductsState {
   InventoryLoaded(super.products);
+}
+
+final class InventoryRefreshing extends InventoryProductsState {
+  InventoryRefreshing(super.products);
+}
+
+final class InventoryRefreshFailure extends InventoryProductsState {
+  InventoryRefreshFailure(super.products, this.message);
+
+  final String message;
+
+  @override
+  List<Object> get props => <Object>[...super.props, message];
 }
 
 final class InventoryEmpty extends InventoryState {

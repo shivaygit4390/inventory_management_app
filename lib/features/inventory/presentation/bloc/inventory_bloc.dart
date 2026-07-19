@@ -2,28 +2,36 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/delete_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_state.dart';
 
 final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
-  InventoryBloc(this._getProducts, this._createProduct, this._updateProduct)
-    : super(const InventoryInitial()) {
+  InventoryBloc(
+    this._getProducts,
+    this._createProduct,
+    this._updateProduct,
+    this._deleteProduct,
+  ) : super(const InventoryInitial()) {
     on<InventoryProductsRequested>(_onProductsRequested);
+    on<InventoryProductsRefreshRequested>(_onProductsRefreshRequested);
     on<InventoryProductCreationRequested>(_onProductCreationRequested);
     on<InventoryProductUpdateRequested>(_onProductUpdateRequested);
+    on<InventoryProductDeletionRequested>(_onProductDeletionRequested);
   }
 
   final GetProducts _getProducts;
   final CreateProduct _createProduct;
   final UpdateProduct _updateProduct;
+  final DeleteProduct _deleteProduct;
 
   Future<void> _onProductsRequested(
     InventoryProductsRequested event,
     Emitter<InventoryState> emit,
   ) async {
-    if (state is InventoryLoading || state is InventoryMutationInProgress) {
+    if (_isBusy) {
       return;
     }
 
@@ -42,6 +50,35 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
       addError(error, stackTrace);
       emit(
         const InventoryFailure('Unable to load inventory. Please try again.'),
+      );
+    }
+  }
+
+  Future<void> _onProductsRefreshRequested(
+    InventoryProductsRefreshRequested event,
+    Emitter<InventoryState> emit,
+  ) async {
+    if (_isBusy) {
+      return;
+    }
+
+    final List<Product> previousProducts = _visibleProducts;
+    emit(InventoryRefreshing(previousProducts));
+
+    try {
+      final List<Product> products = await _getProducts();
+      emit(
+        products.isEmpty ? const InventoryEmpty() : InventoryLoaded(products),
+      );
+    } on AppException catch (error) {
+      emit(InventoryRefreshFailure(previousProducts, error.message));
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(
+        InventoryRefreshFailure(
+          previousProducts,
+          'Unable to refresh inventory. Please try again.',
+        ),
       );
     }
   }
@@ -68,12 +105,62 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
     );
   }
 
+  Future<void> _onProductDeletionRequested(
+    InventoryProductDeletionRequested event,
+    Emitter<InventoryState> emit,
+  ) async {
+    if (_isBusy) {
+      return;
+    }
+
+    final List<Product> previousProducts = _visibleProducts;
+    emit(
+      InventoryMutationInProgress(
+        previousProducts,
+        InventoryMutationType.delete,
+      ),
+    );
+
+    try {
+      await _deleteProduct(event.product.id);
+      final List<Product> refreshedProducts = await _refreshAfterMutation(
+        affectedProduct: event.product,
+        previousProducts: previousProducts,
+        mutationType: InventoryMutationType.delete,
+      );
+      emit(
+        InventoryMutationSuccess(
+          refreshedProducts,
+          product: event.product,
+          mutationType: InventoryMutationType.delete,
+        ),
+      );
+    } on AppException catch (error) {
+      emit(
+        InventoryMutationFailure(
+          previousProducts,
+          message: error.message,
+          mutationType: InventoryMutationType.delete,
+        ),
+      );
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(
+        InventoryMutationFailure(
+          previousProducts,
+          message: 'Unable to delete product. Please try again.',
+          mutationType: InventoryMutationType.delete,
+        ),
+      );
+    }
+  }
+
   Future<void> _performMutation({
     required InventoryMutationType mutationType,
     required Future<Product> Function() mutate,
     required Emitter<InventoryState> emit,
   }) async {
-    if (state is InventoryLoading || state is InventoryMutationInProgress) {
+    if (_isBusy) {
       return;
     }
 
@@ -83,7 +170,7 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
     try {
       final Product savedProduct = await mutate();
       final List<Product> refreshedProducts = await _refreshAfterMutation(
-        savedProduct: savedProduct,
+        affectedProduct: savedProduct,
         previousProducts: previousProducts,
         mutationType: mutationType,
       );
@@ -107,9 +194,14 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
       emit(
         InventoryMutationFailure(
           previousProducts,
-          message: mutationType == InventoryMutationType.create
-              ? 'Unable to add product. Please try again.'
-              : 'Unable to update product. Please try again.',
+          message: switch (mutationType) {
+            InventoryMutationType.create =>
+              'Unable to add product. Please try again.',
+            InventoryMutationType.update =>
+              'Unable to update product. Please try again.',
+            InventoryMutationType.delete =>
+              'Unable to delete product. Please try again.',
+          },
           mutationType: mutationType,
         ),
       );
@@ -117,7 +209,7 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
   }
 
   Future<List<Product>> _refreshAfterMutation({
-    required Product savedProduct,
+    required Product affectedProduct,
     required List<Product> previousProducts,
     required InventoryMutationType mutationType,
   }) async {
@@ -126,7 +218,7 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
       return _reconcileLocally(
-        savedProduct: savedProduct,
+        affectedProduct: affectedProduct,
         previousProducts: previousProducts,
         mutationType: mutationType,
       );
@@ -134,20 +226,27 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
   }
 
   List<Product> _reconcileLocally({
-    required Product savedProduct,
+    required Product affectedProduct,
     required List<Product> previousProducts,
     required InventoryMutationType mutationType,
   }) {
-    if (mutationType == InventoryMutationType.create) {
-      return <Product>[savedProduct, ...previousProducts];
-    }
-
-    return previousProducts
-        .map(
-          (Product product) =>
-              product.id == savedProduct.id ? savedProduct : product,
-        )
-        .toList(growable: false);
+    return switch (mutationType) {
+      InventoryMutationType.create => <Product>[
+        affectedProduct,
+        ...previousProducts,
+      ],
+      InventoryMutationType.update =>
+        previousProducts
+            .map(
+              (Product product) =>
+                  product.id == affectedProduct.id ? affectedProduct : product,
+            )
+            .toList(growable: false),
+      InventoryMutationType.delete =>
+        previousProducts
+            .where((Product product) => product.id != affectedProduct.id)
+            .toList(growable: false),
+    };
   }
 
   List<Product> get _visibleProducts {
@@ -156,4 +255,9 @@ final class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
         ? currentState.products
         : const <Product>[];
   }
+
+  bool get _isBusy =>
+      state is InventoryLoading ||
+      state is InventoryRefreshing ||
+      state is InventoryMutationInProgress;
 }

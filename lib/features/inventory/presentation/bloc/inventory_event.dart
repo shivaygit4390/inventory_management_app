@@ -12,6 +12,10 @@ final class InventoryProductsRequested extends InventoryEvent {
   const InventoryProductsRequested();
 }
 
+final class InventoryProductsRefreshRequested extends InventoryEvent {
+  const InventoryProductsRefreshRequested();
+}
+
 final class InventoryProductCreationRequested extends InventoryEvent {
   const InventoryProductCreationRequested(this.product);
 
@@ -23,6 +27,15 @@ final class InventoryProductCreationRequested extends InventoryEvent {
 
 final class InventoryProductUpdateRequested extends InventoryEvent {
   const InventoryProductUpdateRequested(this.product);
+
+  final Product product;
+
+  @override
+  List<Object> get props => <Object>[product];
+}
+
+final class InventoryProductDeletionRequested extends InventoryEvent {
+  const InventoryProductDeletionRequested(this.product);
 
   final Product product;
 

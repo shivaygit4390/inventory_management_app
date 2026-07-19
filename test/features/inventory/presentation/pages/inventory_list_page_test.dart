@@ -7,6 +7,7 @@ import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/delete_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
@@ -23,6 +24,26 @@ void main() {
     sku: 'WM-001',
     imageUrl: 'https://cdn.example.com/wireless_mouse.png',
   );
+  const Product keyboard = Product(
+    id: '2',
+    name: 'Mechanical Keyboard',
+    description: 'RGB mechanical keyboard',
+    category: 'Electronics',
+    price: 2499,
+    stockQuantity: 12,
+    sku: 'KB-002',
+    imageUrl: 'https://cdn.example.com/keyboard.png',
+  );
+  const Product hub = Product(
+    id: '3',
+    name: 'USB-C Hub',
+    description: '6-in-1 USB-C Hub',
+    category: 'Accessories',
+    price: 1499,
+    stockQuantity: 18,
+    sku: 'HUB-003',
+    imageUrl: 'https://cdn.example.com/hub.png',
+  );
 
   Future<void> pumpInventoryApp(
     WidgetTester tester,
@@ -34,6 +55,7 @@ void main() {
           GetProducts(repository),
           CreateProduct(repository),
           UpdateProduct(repository),
+          DeleteProduct(repository),
         ),
       ),
     );
@@ -225,6 +247,129 @@ void main() {
     expect(find.text('Wireless Mouse Pro'), findsOneWidget);
     expect(repository.getCalls, 2);
   });
+
+  testWidgets('searches across product fields and clears the query', (
+    WidgetTester tester,
+  ) async {
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('inventory-search-field')),
+      'KB-002',
+    );
+    await tester.pump();
+
+    expect(find.text('Mechanical Keyboard'), findsOneWidget);
+    expect(find.text('Wireless Mouse'), findsNothing);
+    expect(find.text('USB-C Hub'), findsNothing);
+    expect(find.text('1 of 3 products'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Clear search'));
+    await tester.pump();
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+    expect(find.text('USB-C Hub'), findsOneWidget);
+  });
+
+  testWidgets('combines category filtering with the current search', (
+    WidgetTester tester,
+  ) async {
+    await pumpInventoryApp(
+      tester,
+      ControlledInventoryRepository(
+        Future<List<Product>>.value(<Product>[product, keyboard, hub]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('inventory-category-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Accessories').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('USB-C Hub'), findsOneWidget);
+    expect(find.text('Wireless Mouse'), findsNothing);
+    expect(find.text('1 of 3 products'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('inventory-search-field')),
+      'mouse',
+    );
+    await tester.pump();
+
+    expect(find.text('No matching products'), findsOneWidget);
+    expect(find.text('0 of 3 products'), findsOneWidget);
+  });
+
+  testWidgets('cancels deletion without changing inventory', (
+    WidgetTester tester,
+  ) async {
+    final MutableInventoryRepository repository = MutableInventoryRepository(
+      <Product>[product],
+    );
+    await pumpInventoryApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Wireless Mouse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Delete product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete product?'), findsOneWidget);
+    expect(find.textContaining('cannot be undone'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product details'), findsOneWidget);
+    expect(repository.deleteCalls, 0);
+  });
+
+  testWidgets('confirms deletion and refreshes the list', (
+    WidgetTester tester,
+  ) async {
+    final MutableInventoryRepository repository = MutableInventoryRepository(
+      <Product>[product, keyboard],
+    );
+    await pumpInventoryApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Wireless Mouse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Delete product'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-product-deletion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wireless Mouse'), findsNothing);
+    expect(find.text('Mechanical Keyboard'), findsOneWidget);
+    expect(find.text('Wireless Mouse was deleted.'), findsOneWidget);
+    expect(repository.deleteCalls, 1);
+    expect(repository.getCalls, 2);
+  });
+
+  testWidgets('pull-to-refresh fetches and displays the latest products', (
+    WidgetTester tester,
+  ) async {
+    final MutableInventoryRepository repository = MutableInventoryRepository(
+      <Product>[product],
+    );
+    await pumpInventoryApp(tester, repository);
+    await tester.pumpAndSettle();
+    repository.products.add(hub);
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, 320));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('USB-C Hub'), findsOneWidget);
+    expect(repository.getCalls, 2);
+  });
 }
 
 final class ControlledInventoryRepository implements InventoryRepository {
@@ -275,6 +420,7 @@ class MutableInventoryRepository implements InventoryRepository {
 
   final List<Product> products;
   int getCalls = 0;
+  int deleteCalls = 0;
 
   @override
   Future<List<Product>> getProducts() async {
@@ -315,7 +461,10 @@ class MutableInventoryRepository implements InventoryRepository {
   Future<Product> getProduct(String id) => throw UnimplementedError();
 
   @override
-  Future<void> deleteProduct(String id) => throw UnimplementedError();
+  Future<void> deleteProduct(String id) async {
+    deleteCalls += 1;
+    products.removeWhere((Product product) => product.id == id);
+  }
 }
 
 final class PendingCreateInventoryRepository

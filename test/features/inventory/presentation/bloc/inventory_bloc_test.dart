@@ -3,6 +3,7 @@ import 'package:inventory_management_app/core/errors/app_exception.dart';
 import 'package:inventory_management_app/features/inventory/domain/entities/product.dart';
 import 'package:inventory_management_app/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/create_product.dart';
+import 'package:inventory_management_app/features/inventory/domain/use_cases/delete_product.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/get_products.dart';
 import 'package:inventory_management_app/features/inventory/domain/use_cases/update_product.dart';
 import 'package:inventory_management_app/features/inventory/presentation/bloc/inventory_bloc.dart';
@@ -26,6 +27,7 @@ void main() {
       GetProducts(repository),
       CreateProduct(repository),
       UpdateProduct(repository),
+      DeleteProduct(repository),
     );
   }
 
@@ -248,6 +250,127 @@ void main() {
         await bloc.close();
       },
     );
+
+    test('refreshes while preserving visible products', () async {
+      const Product keyboard = Product(
+        id: '2',
+        name: 'Mechanical Keyboard',
+        description: 'RGB mechanical keyboard',
+        category: 'Electronics',
+        price: 2499,
+        stockQuantity: 12,
+        sku: 'KB-002',
+        imageUrl: 'https://cdn.example.com/keyboard.png',
+      );
+      final MutationInventoryRepository repository =
+          MutationInventoryRepository(products: <Product>[product]);
+      final InventoryBloc bloc = createBloc(repository);
+      bloc.add(const InventoryProductsRequested());
+      await bloc.stream.firstWhere(
+        (InventoryState state) => state is InventoryLoaded,
+      );
+      repository._products.add(keyboard);
+
+      final Future<void> expectation = expectLater(
+        bloc.stream,
+        emitsInOrder(<InventoryState>[
+          InventoryRefreshing(<Product>[product]),
+          InventoryLoaded(<Product>[product, keyboard]),
+        ]),
+      );
+
+      bloc.add(const InventoryProductsRefreshRequested());
+
+      await expectation;
+      expect(repository.getCalls, 2);
+      await bloc.close();
+    });
+
+    test('keeps products visible when pull-to-refresh fails', () async {
+      final RefreshFailureInventoryRepository repository =
+          RefreshFailureInventoryRepository(<Product>[product]);
+      final InventoryBloc bloc = createBloc(repository);
+      bloc.add(const InventoryProductsRequested());
+      await bloc.stream.firstWhere(
+        (InventoryState state) => state is InventoryLoaded,
+      );
+
+      final Future<void> expectation = expectLater(
+        bloc.stream,
+        emitsInOrder(<InventoryState>[
+          InventoryRefreshing(<Product>[product]),
+          InventoryRefreshFailure(<Product>[product], 'Refresh failed.'),
+        ]),
+      );
+
+      bloc.add(const InventoryProductsRefreshRequested());
+
+      await expectation;
+      await bloc.close();
+    });
+
+    test('deletes a product and refreshes the visible inventory', () async {
+      final MutationInventoryRepository repository =
+          MutationInventoryRepository(products: <Product>[product]);
+      final InventoryBloc bloc = createBloc(repository);
+      bloc.add(const InventoryProductsRequested());
+      await bloc.stream.firstWhere(
+        (InventoryState state) => state is InventoryLoaded,
+      );
+
+      final Future<void> expectation = expectLater(
+        bloc.stream,
+        emitsInOrder(<InventoryState>[
+          InventoryMutationInProgress(<Product>[
+            product,
+          ], InventoryMutationType.delete),
+          InventoryMutationSuccess(
+            const <Product>[],
+            product: product,
+            mutationType: InventoryMutationType.delete,
+          ),
+        ]),
+      );
+
+      bloc.add(const InventoryProductDeletionRequested(product));
+
+      await expectation;
+      expect(repository.deleteCalls, 1);
+      expect(repository.getCalls, 2);
+      await bloc.close();
+    });
+
+    test('keeps products visible when deletion fails', () async {
+      final MutationInventoryRepository repository =
+          MutationInventoryRepository(
+            products: <Product>[product],
+            mutationError: const NetworkException('Delete failed.'),
+          );
+      final InventoryBloc bloc = createBloc(repository);
+      bloc.add(const InventoryProductsRequested());
+      await bloc.stream.firstWhere(
+        (InventoryState state) => state is InventoryLoaded,
+      );
+
+      final Future<void> expectation = expectLater(
+        bloc.stream,
+        emitsInOrder(<InventoryState>[
+          InventoryMutationInProgress(<Product>[
+            product,
+          ], InventoryMutationType.delete),
+          InventoryMutationFailure(
+            <Product>[product],
+            message: 'Delete failed.',
+            mutationType: InventoryMutationType.delete,
+          ),
+        ]),
+      );
+
+      bloc.add(const InventoryProductDeletionRequested(product));
+
+      await expectation;
+      await bloc.close();
+    });
   });
 }
 
@@ -292,6 +415,7 @@ final class MutationInventoryRepository implements InventoryRepository {
   int getCalls = 0;
   int createCalls = 0;
   int updateCalls = 0;
+  int deleteCalls = 0;
 
   @override
   Future<List<Product>> getProducts() async {
@@ -329,6 +453,41 @@ final class MutationInventoryRepository implements InventoryRepository {
 
   @override
   Future<Product> getProduct(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteProduct(String id) async {
+    deleteCalls += 1;
+    final Object? currentError = mutationError;
+    if (currentError != null) {
+      throw currentError;
+    }
+    _products.removeWhere((Product product) => product.id == id);
+  }
+}
+
+final class RefreshFailureInventoryRepository implements InventoryRepository {
+  RefreshFailureInventoryRepository(this.products);
+
+  final List<Product> products;
+  int _getCalls = 0;
+
+  @override
+  Future<List<Product>> getProducts() async {
+    _getCalls += 1;
+    if (_getCalls > 1) {
+      throw const NetworkException('Refresh failed.');
+    }
+    return List<Product>.of(products);
+  }
+
+  @override
+  Future<Product> getProduct(String id) => throw UnimplementedError();
+
+  @override
+  Future<Product> createProduct(Product product) => throw UnimplementedError();
+
+  @override
+  Future<Product> updateProduct(Product product) => throw UnimplementedError();
 
   @override
   Future<void> deleteProduct(String id) => throw UnimplementedError();
